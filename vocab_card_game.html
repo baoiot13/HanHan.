@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Thẻ Bài Từ Vựng - Phong cách Truyện Tranh</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@700&display=swap');
+
+    body {
+      font-family: 'Comic Neue', cursive;
+      background: radial-gradient(circle, #ffe0f0 0%, #ffc0cb 50%, #ff8acb 100%);
+      color: #2d0036;
+      text-align: center;
+      padding: 20px;
+      margin: 0;
+    }
+
+    h1, h2 {
+      text-shadow: 2px 2px 0 #fff;
+    }
+
+    .card {
+      background: #fff1fa;
+      border: 4px dashed #ff4da6;
+      color: #660033;
+      border-radius: 12px;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.2);
+      padding: 15px;
+      margin: 10px auto;
+      width: 90%;
+      max-width: 300px;
+      cursor: pointer;
+      transition: all 0.2s ease-in-out;
+      font-size: 18px;
+    }
+
+    .card:hover {
+      transform: scale(1.05) rotate(-2deg);
+    }
+
+    .correct {
+      background-color: #caffbf !important;
+      border-color: #32cd32;
+    }
+
+    .wrong {
+      background-color: #ffd6d6 !important;
+      border-color: #ff4d4d;
+    }
+
+    #score {
+      margin-top: 20px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    input, button {
+      width: 90%;
+      max-width: 300px;
+      display: block;
+      margin: 10px auto;
+    }
+
+    input {
+      padding: 12px;
+      border-radius: 10px;
+      border: 2px dashed #ff69b4;
+      font-size: 16px;
+      font-family: 'Comic Neue', cursive;
+    }
+
+    button {
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: #ff66c4;
+      color: white;
+      font-size: 16px;
+      font-family: 'Comic Neue', cursive;
+      cursor: pointer;
+      box-shadow: 2px 4px 0px #cc3385;
+    }
+
+    button:hover {
+      background: #ff1493;
+    }
+
+    #word-list {
+      margin-top: 15px;
+      font-size: 16px;
+      background: #fff6f9;
+      color: #660033;
+      padding: 10px;
+      border-radius: 10px;
+      display: inline-block;
+      max-width: 90%;
+    }
+
+    #retry-btn {
+      display: none;
+      margin-top: 20px;
+    }
+
+    footer {
+      margin-top: 40px;
+      font-size: 14px;
+      color: #440022;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎴 Game Thẻ Bài Từ Vựng 🎴</h1>
+
+  <div id="input-section">
+    <input type="text" id="word" placeholder="Từ mới (VD: hello)">
+    <input type="text" id="meaning" placeholder="Nghĩa (VD: xin chào)">
+    <button onclick="addWord()">➕ Thêm từ</button>
+    <button onclick="startGame()">🚀 Bắt đầu chơi</button>
+    <button onclick="clearWords()">🗑️ Xóa danh sách</button>
+    <div id="word-list"></div>
+    <div id="game-count"></div>
+  </div>
+
+  <h2 id="question" style="display:none">Từ: ...</h2>
+  <div id="options"></div>
+  <div id="score"></div>
+  <button id="retry-btn" onclick="retryGame()">🔁 Chơi lại</button>
+
+  <footer>
+    💖 Được tạo với yêu thương dành riêng cho người ấy.<br>
+    ✨ Phát triển bởi <strong>BAOIOT</strong> - Người đặc biệt đứng sau phần mềm này.
+  </footer>
+
+  <script>
+    let words = JSON.parse(localStorage.getItem("words")) || [];
+    let gameCount = parseInt(localStorage.getItem("gameCount")) || 0;
+    let current = 0;
+    let score = 0;
+    let tries = 0;
+
+    function addWord() {
+      const wordInput = document.getElementById("word").value.trim();
+      const meaningInput = document.getElementById("meaning").value.trim();
+      if (wordInput && meaningInput) {
+        words.push({ word: wordInput, meaning: meaningInput });
+        localStorage.setItem("words", JSON.stringify(words));
+        document.getElementById("word").value = "";
+        document.getElementById("meaning").value = "";
+        updateWordList();
+      }
+    }
+
+    function clearWords() {
+      if (confirm("Bạn có chắc muốn xóa toàn bộ danh sách từ?")) {
+        words = [];
+        gameCount = 0;
+        localStorage.removeItem("words");
+        localStorage.setItem("gameCount", 0);
+        updateWordList();
+      }
+    }
+
+    function updateWordList() {
+      const wordList = document.getElementById("word-list");
+      if (words.length === 0) {
+        wordList.innerHTML = "<em>Danh sách từ đang trống.</em>";
+      } else {
+        wordList.innerHTML = "<strong>📚 Danh sách từ:</strong><br>" + words.map(w => `${w.word} - ${w.meaning}`).join("<br>");
+      }
+      document.getElementById("game-count").innerHTML = `🧮 Bạn đã chơi: ${gameCount} lượt`;
+    }
+
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+
+    function startGame() {
+      if (words.length < 3) {
+        alert("Cần ít nhất 3 từ để bắt đầu!");
+        return;
+      }
+      gameCount++;
+      localStorage.setItem("gameCount", gameCount);
+      if (gameCount >= 100) {
+        localStorage.removeItem("words");
+        localStorage.setItem("gameCount", 0);
+        words = [];
+        alert("🎯 Bạn đã chơi 100 lượt. Danh sách từ đã được xóa để bắt đầu mới!");
+        updateWordList();
+        retryGame();
+        return;
+      }
+      current = 0;
+      score = 0;
+      tries = 0;
+      document.getElementById("input-section").style.display = "none";
+      document.getElementById("question").style.display = "block";
+      document.getElementById("score").innerHTML = "";
+      document.getElementById("retry-btn").style.display = "none";
+      showQuestion();
+    }
+
+    function showQuestion() {
+      if (current >= words.length) {
+        document.getElementById("question").textContent = "🎉 Hoàn thành!";
+        document.getElementById("options").innerHTML = "";
+        document.getElementById("score").innerHTML = `Điểm: ${score}/${words.length} <br>Đánh giá: ${score >= 12 ? '🌟 Xuất sắc!' : score >= 8 ? '👍 Tốt!' : '📖 Cần cố gắng thêm!'}`;
+        document.getElementById("retry-btn").style.display = "inline-block";
+        return;
+      }
+
+      const word = words[current];
+      document.getElementById("question").textContent = `Từ: ${word.word}`;
+
+      let wrongs = shuffle(words.filter(w => w.word !== word.word)).slice(0, 2);
+      let choices = shuffle([word.meaning, ...wrongs.map(w => w.meaning)]);
+
+      document.getElementById("options").innerHTML = "";
+      choices.forEach((choice) => {
+        const btn = document.createElement("div");
+        btn.textContent = choice;
+        btn.className = "card";
+        btn.onclick = () => {
+          if (choice === word.meaning) {
+            btn.classList.add("correct");
+            score++;
+            current++;
+            tries = 0;
+            setTimeout(showQuestion, 1000);
+          } else {
+            btn.classList.add("wrong");
+            tries++;
+            if (tries >= 2) {
+              current++;
+              tries = 0;
+              setTimeout(showQuestion, 1000);
+            }
+          }
+        };
+        document.getElementById("options").appendChild(btn);
+      });
+    }
+
+    function retryGame() {
+      document.getElementById("input-section").style.display = "block";
+      document.getElementById("question").style.display = "none";
+      document.getElementById("score").innerHTML = "";
+      document.getElementById("options").innerHTML = "";
+      document.getElementById("retry-btn").style.display = "none";
+      updateWordList();
+    }
+
+    updateWordList();
+  </script>
+</body>
+</html>
